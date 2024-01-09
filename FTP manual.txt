@@ -1,0 +1,25 @@
+there are 3 types of FTP (File Transfer Protocol):
+1. FTP
+2. FTPS
+3. SFTP
+
+on Raspberry pi OS, FTP and FTPS can be used if FTP service is already installed. one of the FTP service is "vsftpd". and SFTP can be enabled when SSH is enabled.
+
+How to use SFTP:
+CLI method
+1. Open Terminal -> start SFTP session by run this command below:
+
+sftp <username>@<remote-server-address>
+
+2. Enter password.
+3. Use SFTP commands (ask Internet about the detail syntax and program)
+	- put localfile		: Uploads a file from your Raspberry Pi to the remote server.
+	- get remotefile	: Downloads a file from the remote server to your Raspberry Pi.
+	- ls, cd, pwd, etc.	: Standard commands to list, change, and show directories.
+4. Exit.
+
+SFTP Client (GUI app) [Not installed yet]
+option app: FileZilla, WinSCP, Cyberduck
+1. Open the SFTP Client.
+2. Create a new connection (by enter Raspberry Pi's IP address, port number (22), username, and password).
+3. Transfer files.

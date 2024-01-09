@@ -1,0 +1,1 @@
+time,cpu_Temp,bat_Temp,bat_soc,bat_ttl_V,bat_avg_V,con_out_V_ref,con_in_V,con_in_A,con_out_kW,con_in_Hz,con_in_PF,con_in_kW,con_consume_kWh,con_produce_kWh,inv_out_Hz,inv_out_A,inv_out_V_ref,inv_out_kWh
