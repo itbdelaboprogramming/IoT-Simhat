@@ -118,6 +118,15 @@ add_iptables_rule "-A FORWARD -p tcp --dport 9993 -j ACCEPT"
 sudo su -c  "iptables-save > /etc/iptables/rules.v4"
 
 #=================================================
+# Function to delete existing routes for a specified interface
+del_exist_route() {
+    local interface=$1
+    # Get all routes for the interface and delete them
+    while read -r route; do
+        sudo ip route del $route
+    done < <(ip route show dev $interface | awk '{print $1}')
+}
+
 # DNSMASQ SET UP
 
 ## DHCP & DNS settings for router operation using dnsmasq
@@ -128,8 +137,8 @@ sudo ifconfig $eth up && sudo ip link set up $eth
 sudo ifconfig $eth $ip_address netmask $netmask
 # Stop dnsmasq service
 sudo systemctl stop dnsmasq
-# Remove default route created by dhcpcd
-sudo ip route del 0/0 dev $eth
+# Remove default/previous route created by dhcpcd
+del_exist_route "$eth"
 sudo rm -rf /etc/dnsmasq.d/*
 # Add new routing rules for dnsmasq
 sudo echo -e "interface=$eth
