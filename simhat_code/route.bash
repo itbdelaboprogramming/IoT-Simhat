@@ -2,7 +2,7 @@
 #title           :route.bash
 #description     :RPi as router configuration script, used through init_dial.bash file
 #author          :Nicholas Putra Rihandoko, Nauval Chantika
-#date            :2024/01/09
+#date            :2024/01/08
 #version         :1.2
 #usage           :Iot Gateway
 #notes           :
