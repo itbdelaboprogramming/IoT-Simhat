@@ -20,8 +20,10 @@ sudo apt upgrade -y
 sudo apt install onboard -y
 
 sudo bash NIW/simhat_code/init_dial.bash
-sudo bash NIW/modbus_code/init_modbus.bash
-sudo bash NIW/canbus_code/init_canbus.bash
+#sudo bash NIW/modbus_code/init_modbus.bash
+#sudo bash NIW/canbus_code/init_canbus.bash
+#sudo bash NIW/ADDA_code/init_ADDA.bash
+sudo bash NIW/Fusion_code/init_Fusion.bash
 #sudo bash NIW/gps_code/init_gps.bash
 #sudo bash NIW/key_code/init_auth.bash
 #python3 NIW/key_code/src/jobs.py kill
