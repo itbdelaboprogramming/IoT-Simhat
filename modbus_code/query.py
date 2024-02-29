@@ -14,6 +14,7 @@ import logging
 import pymysql
 import signal
 import datetime
+import ftplib
 import csv
 import os
 
@@ -87,7 +88,11 @@ def log_in_csv(title,data,timer,filename):
                 csv_date = row_data[0]
                 is_valid_date = True
                 try: datetime.datetime.strptime(csv_date, '%Y-%m-%d %H:%M:%S')
-                except ValueError: is_valid_date = False
+                except ValueError:
+                    csv_date = row_data[0] + ' ' + row_data[1]
+                    try:
+                        datetime.datetime.strptime(csv_date, '%Y-%m-%d %H:%M:%S')
+                    except ValueError: is_valid_date = False
                 if is_valid_date:
                     # Calculate the difference in days
                     log_date = datetime.datetime.strptime(csv_date, '%Y-%m-%d %H:%M:%S')
@@ -211,3 +216,78 @@ def get_updown_time(mysql_server,timer,timeout=2):
         downtime = abs(bootup_time - prev_update)
         total_downtime = total_downtime + downtime
     return [bootup_time, uptime, total_uptime, downtime, total_downtime]
+
+#################################################################################################################
+## Handle Upload csv files using FTP
+
+def upload_file_ftp(server, username, password, local_path, remote_path):
+    try:
+        with ftplib.FTP(server, username, password) as ftp:
+            ftp.set_pasv(True)  # Use passive mode; change to False to try active mode
+            with open(local_path, 'rb') as local_file:
+                ftp.storbinary(f'STOR {remote_path}', local_file)
+            print(f"Uploaded {local_path} to {remote_path}")
+            return True
+    except Exception as e:
+        print(f"Error uploading {local_path}: {e}")
+        return False
+        
+def download_file_ftp(server, username, password, remote_path, local_path):
+    try:
+        with ftplib.FTP(server, username, password) as ftp:
+            ftp.set_pasv(True)  # Use passive mode; change to False to try active mode
+            with open(local_path, 'wb') as local_file:
+                ftp.retrbinary(f'RETR {remote_path}', local_file.write)
+            print(f"Downloaded {remote_path} to {local_path}")
+            return True
+    except Exception as e:
+        print(f"Error downloading {remote_path}: {e}")
+        return False
+
+def archive_file(file_path):
+    try:
+        archive_path = file_path + ".bak"
+        os.rename(file_path, archive_path)
+        print(f"Archived {file_path} to {archive_path}")
+    except Exception as e:
+        print(f"Error Archiving {file_path}: {e}")
+
+def delete_file(file_path):
+    try:
+        os.remove(file_path)
+        print(f"Deleted {file_path}")
+    except Exception as e:
+        print(f"Error deleting {file_path}: {e}")
+
+def prepare_new_file(file_path, header):
+    try:
+        with open(file_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(header)
+        print(f"Created {file_path}")
+    except Exception as e:
+        print(f"Error creating {file_path}: {e}")
+
+def key_check(dictionary, key):
+    try:
+        # Attempt to access the value
+        value = dictionary[key]
+        return value
+    except KeyError:
+        # Key does not exist
+        print(f"'{key}' does not exist in the dictionary'")
+
+def update_FTP(title, data, timer, filename, ftp_server, last_time, interval_upload, timeout):
+    global log_directory
+    server = key_check(ftp_server, 'host')
+    username = key_check(ftp_server, 'user')
+    password = key_check(ftp_server, 'password')
+    path = key_check(ftp_server, 'path')
+    remote_path = os.path.join(path,filename)
+    local_path = os.path.join(log_directory,filename)
+    log_in_csv(title ,data, timer, filename)
+    if (timer - last_time).total_seconds() > interval_upload:
+        last_time = timer
+        if upload_file_ftp(server, username, password, local_path, remote_path):
+            delete_file(local_path)
+            prepare_new_file(local_path, title)

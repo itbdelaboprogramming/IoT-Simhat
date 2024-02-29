@@ -17,9 +17,9 @@ import os
 import socket
 import threading
 import logging
-from pymodbus.client import ModbusSerialClient as ModbusClient
 from queue import Queue
 import query
+from pymodbus.client import ModbusSerialClient as ModbusClient
 from lib import kyuden_battery_72kWh as battery
 from lib import yaskawa_D1000 as converter
 from lib import yaskawa_GA500 as inverter
@@ -42,6 +42,11 @@ CLIENT_LATENCY  = 100   # the delay time master/client takes from receiving resp
 TIMEOUT         = 1   # the maximum time the master/client will wait for response from slave/server (in seconds)
 INTERVAL        = 3   # the period between each subsequent communication routine/loop (in seconds)
 
+# Define FTP database parameters
+FTP_SERVER = {"host":"*HOST*",
+                       "user":"*USERNAME*",
+                       "password":"*PASSWORD*",
+                       "path":"*/folders/inside/server*"}
 # Define MySQL Database parameters
 SQL_SERVER    = {"host":"machinedatanglobal.c4sty2dpq6yv.ap-northeast-1.rds.amazonaws.com",
                     "user":"Nglobal_root_NIW",
@@ -129,17 +134,17 @@ def data_processing(server, timer):
             server[2].Output_Frequency, server[2].Output_Current, server[2].Output_Voltage, server[2].AC_Power] #,server[3].V_PU, server[3].I_PU]
     
     return title, data
-
-def update_database(title, data, timer):
-    global SQL_SERVER,FILENAME
+    
+def update_SQL(title, data, timer, csv_file, sql_server, last_time, interval_upload=0, timeout=3):
     # Define MySQL queries and data which will be used in the program
-    cpu_temp = query.get_cpu_temperature()
-    sql_query = ("INSERT INTO `{}` ({}) VALUES ({})".format(SQL_SERVER["table"],
+    sql_query = ("INSERT INTO `{}` ({}) VALUES ({})".format(sql_server["table"],
                                                                 ",".join(title),
                                                                 ",".join(['%s' for _ in range(len(title))])))
 
-    query.log_in_csv(title ,data, timer, FILENAME)
-    query.retry_mysql(SQL_SERVER, sql_query, FILENAME, SQL_TIMEOUT)
+    query.log_in_csv(title ,data, timer, csv_file)
+    if (timer - last_time).total_seconds() > interval_upload:
+        last_time = timer
+        query.retry_mysql(sql_server, sql_query, csv_file, timeout)
 ########################################################################
 def socket_client_thread(data_queue):
     while True:
@@ -190,6 +195,7 @@ def main():
                 first[0] = False
                 # time counter
                 start = datetime.datetime.now()
+                last_update_time = start
                 write_modbus(server)
             
             # Send the command to read the measured value and do all other things
@@ -204,7 +210,8 @@ def main():
                 start = timer
                 first[1] = False
                 # Update/push data to database
-                update_database(title, data, timer)
+                update_SQL(title, data, timer, FILENAME, SQL_SERVER, last_update_time, 0, SQL_TIMEOUT)
+                #query.update_FTP(title, data, timer, FILENAME, FTP_SERVER, last_update_time, 0, SQL_TIMEOUT)
         
             time.sleep(INTERVAL)
     

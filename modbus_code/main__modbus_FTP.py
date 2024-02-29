@@ -17,9 +17,9 @@ import os
 import socket
 import threading
 import logging
-from pymodbus.client import ModbusSerialClient as ModbusClient
 from queue import Queue
 import query
+from pymodbus.client import ModbusSerialClient as ModbusClient
 from lib import omron_KMN1FLK as kmn1
 #from lib import omron_KM50C1FLK as km50c1
 #from lib import msystem_M5XWTU113 as msystem
@@ -41,27 +41,47 @@ CLIENT_LATENCY  = 100   # the delay time master/client takes from receiving resp
 TIMEOUT         = 1   # the maximum time the master/client will wait for response from slave/server (in seconds)
 INTERVAL        = 10   # the period between each subsequent communication routine/loop (in seconds)
 
+
 # Define FTP database parameters
-FTP_SERVER = {"host":"*HOST*",
-                       "user":"*USERNAME*",
-                       "password":"*PASSWORD*",
-                       "path":"*/folders/inside/server*"}
+FTP_SERVER_REALTIME = {"host":"13.115.57.147",
+                       "user":"NIW0JET1",
+                       "password":"123456789",
+                       "path":"/MicroHydro/NIW0JET1/UNIT1"}
+FTP_SERVER_RECAP    = {"host":"13.115.57.147",
+                       "user":"NIW0JET1",
+                       "password":"123456789",
+                       "path":"/MicroHydro/NIW0JET1/UNIT2"}
+
 # Define MySQL Database parameters
-#SQL_SERVER    = {"host":"machinedatanglobal.c4sty2dpq6yv.ap-northeast-1.rds.amazonaws.com",
-#                    "user":"Nglobal_root_NIW",
-#                    "password":"Niw_Machinedata_11089694",
-#                    "db":"NEPOWER_1",
-#                    "table":"dataparameter",
-#                    "port":3306}
-SQL_SERVER    = {"host":"10.4.171.204",
+#SQL_SERVER_REALTIME = {"host":"machinedatanglobal.c4sty2dpq6yv.ap-northeast-1.rds.amazonaws.com",
+#                       "user":"Nglobal_root_NIW",
+#                       "password":"Niw_Machinedata_11089694",
+#                       "db":"NEPOWER_1",
+#                       "table":"dataparameter1",
+#                       "port":3306}
+#SQL_SERVER_RECAP    = {"host":"machinedatanglobal.c4sty2dpq6yv.ap-northeast-1.rds.amazonaws.com",
+#                       "user":"Nglobal_root_NIW",
+#                       "password":"Niw_Machinedata_11089694",
+#                       "db":"NEPOWER_1",
+#                       "table":"dataparameter2",
+#                       "port":3306}
+
+SQL_SERVER_REALTIME    = {"host":"10.4.171.204",
                     "user":"root",
                     "password":"niw2082023",
                     "db":"omron",
                     "table":"omron_test",
                     "port":3306}
+#SQL_SERVER_RECAP    = {"host":"10.4.171.204",
+#                    "user":"root",
+#                    "password":"niw2082023",
+#                    "db":"omron",
+#                    "table":"omron_recap",
+#                    "port":3306}
 SQL_TIMEOUT   = 3 # the maximum time this device will wait for completing MySQl query (in seconds)
 SQL_INTERVAL  = 60 # the period between each subsequent update to database (in seconds)
-FILENAME = 'modbus_omron_log.csv'
+FILENAME_REALTIME  = 'modbus_omron_realtime_log.csv'
+FILENAME_RECAP     = 'modbus_omron_recap_log.csv'
 
 # Socket communication parameters
 UNIX_SOCKET_PATH = '/tmp/ipc_socket'   #AF_UNIX
@@ -88,8 +108,8 @@ def setup_modbus():
     return server
 
 def read_modbus(server):
-    addr=[["Voltage_1","Current_1","Power_Factor","Frequency","Active_Power","Reactive_Power"]#,
-          #["Voltage_2","Current_2","Power_Factor","Frequency","Active_Power","Reactive_Power"]
+    addr=[["Active_Power","Generated_Active_Energy_kWh","Voltage_1","Current_1"]#,
+          #["Active_Power","Generated_Active_Energy_kWh","Voltage_2","Current_2"]
          ]
     
     for i in range(len(server)):
@@ -117,18 +137,26 @@ def write_modbus(server):
 def data_processing(server, timer):
     cpu_temp = query.get_cpu_temperature()
     
-    title = ["time","cpu_Temp","ct1_Volt1","ct1_Current1","ct1_PF","ct1_Freq","ct1_Watt","ct1_VAr"
+    title = ["DATE","TIME","現在発電量","累積発電量","発電機回転数","発電機電圧",
+             "発電機電流","本日三相発電","ｶﾞｲﾄﾞﾍﾞﾝ開度","水圧","流量","効率","水位",
+             "系統電圧","系統電流","系統連系　ｲﾝﾊﾞｰﾀ　異常保持","ｶﾞｲﾄﾞﾍﾞｰﾝｲﾝﾊﾞｰﾀ異常保持",
+             "放電抵抗器　過熱異常保持","制動ﾕﾆｯﾄ　異常保持","発電機　過熱異常　保持",
+             "発電機　ｲﾝﾊﾞｰﾀ　異常保持","発電機　運転","発電機　運転準備","系統連系　ｺﾝﾊﾞｰﾀ　運転",
+             "系統連系　ｺﾝﾊﾞｰﾀ　運転準備","発電機電力","発電機電圧","ﾍﾞｱﾘﾝｸﾞ温度"
             ]
     
-    data = [timer.strftime("%Y-%m-%d %H:%M:%S"), cpu_temp, server[0].Voltage_1, server[0].Current_1, server[0].Power_Factor,
-            server[0].Frequency, server[0].Active_Power,server[0].Reactive_Power
+    data = [timer.strftime("%Y-%m-%d"),timer.strftime("%H:%M:%S"),
+            (server[0].Active_Power*100),(server[0].Generated_Active_Energy_kWh*10),
+            0,(server[0].Voltage_1*10),(server[0].Current_1*10),(0*1000),
+            (0*100),(0*1000),(0*1),(0*100),(0*1),(0*10),(0*10),0,0,0,0,0,
+            0,0,0,0,0,(0*10),(0*1),(0*10)
            ]
     
     return title, data
-    
+
 def update_SQL(title, data, timer, csv_file, sql_server, last_time, interval_upload=0, timeout=3):
     # Define MySQL queries and data which will be used in the program
-    sql_query = ("INSERT INTO `{}` ({}) VALUES ({})".format(sql_server["table"],
+    sql_query = ("INSERT INTO `{}` ({}) VALUES ({})".format(SQL_SERVER["table"],
                                                                 ",".join(title),
                                                                 ",".join(['%s' for _ in range(len(title))])))
 
@@ -186,7 +214,8 @@ def main():
                 first[0] = False
                 # time counter
                 start = datetime.datetime.now()
-                last_update_time = start
+                real_time = start
+                recap_time = start
                 write_modbus(server)
             
             # Send the command to read the measured value and do all other things
@@ -201,9 +230,11 @@ def main():
                 start = timer
                 first[1] = False
                 # Update/push data to database
-                update_SQL(title, data, timer, FILENAME, SQL_SERVER, last_update_time, 0, SQL_TIMEOUT)
-                #query.update_FTP(title, data, timer, FILENAME, FTP_SERVER, last_update_time, 0, SQL_TIMEOUT)
-        
+                #update_SQL(title, data, timer, FILENAME_REALTIME, SQL_SERVER_REALTIME, real_time, 0, SQL_TIMEOUT)
+                #update_SQL(title, data, timer, FILENAME_RECAP, SQL_SERVER_RECAP, recap_time, 43200, SQL_TIMEOUT*144)
+                query.update_FTP(title, data, timer, FILENAME_REALTIME, FTP_SERVER_REALTIME, real_time, 0, SQL_TIMEOUT)
+                query.update_FTP(title, data, timer, FILENAME_RECAP, FTP_SERVER_RECAP, recap_time, 43200, SQL_TIMEOUT*144)
+                
             time.sleep(INTERVAL)
     
         except Exception as e:
