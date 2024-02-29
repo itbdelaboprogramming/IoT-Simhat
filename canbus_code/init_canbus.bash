@@ -20,7 +20,7 @@ sudo apt install python3-pymysql -y
 #For Virtual Environment use
 #python3 -m venv myenv
 #source myenv/bin/activate
-#pip3 install python-can pymysql
+#pip3 install pymysql python-can
 #deactivate
 
 # 'zerotier' for virtual LAN and remote access
